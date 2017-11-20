@@ -14,26 +14,26 @@ $EDITOR $TMP/out
 
 # Generate a script which will be run on each commit message to rewrite it.
 cat > $TMP/script <<EOF
-#!/usr/bin/env python
+from __future__ import print_function
+import sys
 
 IN = """$SHORTS""".splitlines()
 OUT = """`cat $TMP/out`""".splitlines()
 
 assert len(IN) == len(OUT)
 
-import sys
 lines = sys.stdin.readlines()
 
 found = False
 for idx, line in enumerate(IN):
     if lines[0].strip() == line.strip():
-       print OUT[idx].strip()
+       print(OUT[idx].strip())
        found = True
 if not found:
    sys.exit(1)
 
 for line in lines[1:]:
-    print line.strip()
+    print(line.strip())
 EOF
 
 # Perform the commit message rewriting
