@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e
+
+# Create a temporary directory to throw some stuff in
+TMP=$(mktemp -d)
+trap "rm -r $TMP" EXIT
+
+# Read in the short names of each of the commits and write them to a file
+SHORTS=$(git log --pretty=format:%s $1..HEAD | tee $TMP/out)
+
+# Allow user to edit the final names for each of the commits by calling $EDITOR
+$EDITOR $TMP/out
+
+# Generate a script which will be run on each commit message to rewrite it.
+cat > $TMP/script <<EOF
+#!/usr/bin/env python
+
+IN = """$SHORTS""".splitlines()
+OUT = """`cat $TMP/out`""".splitlines()
+
+assert len(IN) == len(OUT)
+
+import sys
+lines = sys.stdin.readlines()
+
+found = False
+for idx, line in enumerate(IN):
+    if lines[0].strip() == line.strip():
+       print OUT[idx].strip()
+       found = True
+if not found:
+   sys.exit(1)
+
+for line in lines[1:]:
+    print line.strip()
+EOF
+
+# Perform the commit message rewriting
+git filter-branch -f --msg-filter "python $TMP/script" $1..HEAD
