@@ -17,8 +17,8 @@ cat > $TMP/script <<EOF
 from __future__ import print_function
 import sys
 
-IN = """$SHORTS""".splitlines()
-OUT = """`cat $TMP/out`""".splitlines()
+IN = """$SHORTS""".strip().splitlines()
+OUT = """`cat $TMP/out`""".strip().splitlines()
 
 assert len(IN) == len(OUT)
 
@@ -27,10 +27,15 @@ lines = sys.stdin.readlines()
 found = False
 for idx, line in enumerate(IN):
     if lines[0].strip() == line.strip():
-       print(OUT[idx].strip())
-       found = True
+        result = OUT[idx].strip()
+
+        # If the final output contains Part N:, rewrite it to the correct part number
+        result = result.replace("Part N", "Part {}".format(len(OUT) - idx))
+
+        print(result)
+        found = True
 if not found:
-   sys.exit(1)
+    sys.exit(1)
 
 for line in lines[1:]:
     print(line.strip())
