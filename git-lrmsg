@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+# Create a temporary directory to throw some stuff in
+TMP=$(mktemp -d)
+trap "rm -r $TMP" EXIT
+
+# Format the commits, and write them out to a file
+git log --pretty=tformat:'@@%H%n%B' $1..HEAD > $TMP/out
+
+# Allow user to edit the final names for each of the commits by calling $EDITOR
+$EDITOR $TMP/out
+
+cat > $TMP/script <<EOF
+from __future__ import print_function
+import os
+import sys
+
+OUT = """`cat $TMP/out`""".split("@@")
+HASH = os.environ["GIT_COMMIT"]
+
+print("Hash = %s" % HASH, file=sys.stderr)
+
+for entry in OUT:
+    if not entry.startswith(HASH):
+        continue
+    [sha, msg] = entry.split("\n", 1)
+    assert sha.strip() == HASH
+    print(msg)
+    sys.exit(0)
+
+sys.exit(1)
+EOF
+
+# Perform the commit message rewriting
+git filter-branch -f --msg-filter "python $TMP/script" $1..HEAD
