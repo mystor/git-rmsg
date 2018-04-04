@@ -20,8 +20,6 @@ import sys
 OUT = """`cat $TMP/out`""".split("@@")
 HASH = os.environ["GIT_COMMIT"]
 
-print("Hash = %s" % HASH, file=sys.stderr)
-
 for entry in OUT:
     if not entry.startswith(HASH):
         continue
