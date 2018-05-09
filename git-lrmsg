@@ -7,17 +7,17 @@ TMP=$(mktemp -d)
 trap "rm -r $TMP" EXIT
 
 # Format the commits, and write them out to a file
-git log --pretty=tformat:'@@%H%n%B' $1..HEAD > $TMP/out
+git log --pretty=tformat:'@@%H%n%B' $1..HEAD > $TMP/lrmsg
 
 # Allow user to edit the final names for each of the commits by calling $EDITOR
-$EDITOR $TMP/out
+$EDITOR $TMP/lrmsg
 
 cat > $TMP/script <<EOF
 from __future__ import print_function
 import os
 import sys
 
-OUT = """`cat $TMP/out`""".split("@@")
+OUT = """`cat $TMP/lrmsg`""".split("@@")
 HASH = os.environ["GIT_COMMIT"]
 
 for entry in OUT:
@@ -25,11 +25,15 @@ for entry in OUT:
         continue
     [sha, msg] = entry.split("\n", 1)
     assert sha.strip() == HASH
-    print(msg)
+    print(msg.strip())
     sys.exit(0)
 
 sys.exit(1)
 EOF
 
 # Perform the commit message rewriting
-git filter-branch -f --msg-filter "python $TMP/script" $1..HEAD
+if ! git filter-branch -f --msg-filter "python $TMP/script" $1..HEAD; then
+    cp $TMP/lrmsg /tmp/lrmsg.bk
+    echo "filter-branch failed! Message saved to /tmp/lrmsg.bk" >&2
+    exit 1
+fi
